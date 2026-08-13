@@ -1,158 +1,493 @@
 swagger: '2.0'
+
 info:
   title: Bank Argent API documentation
-  description: Contains all available API endpoints in this codebase
+  description: Contains all available API endpoints for Argent Bank
   version: '1.0.0'
-  termsOfService: 'http://swagger.io/terms/'
+
 host: localhost:3001
 basePath: /api/v1
+
 schemes:
   - http
+
+consumes:
+  - application/json
+
+produces:
+  - application/json
+
 paths:
+
+  # =========================
+  # USER
+  # =========================
+
   /user/login:
     post:
       tags:
         - User Module
       summary: Login
-      description: API for Login
+      description: Authenticate a user and return a JWT token
       parameters:
         - in: body
           name: body
-          description: Login Payload
+          description: Login credentials
           required: true
           schema:
             $ref: '#/definitions/Login'
-      produces:
-        - application/json
       responses:
         '200':
-          description: Login Successfully
+          description: User successfully logged in
           schema:
             $ref: '#/definitions/LoginResponse'
         '400':
-          description: Invalid Fields
+          description: Invalid fields
+        '401':
+          description: Invalid email or password
         '500':
           description: Internal Server Error
+
   /user/signup:
     post:
       tags:
         - User Module
       summary: Signup
-      description: API for Signup
+      description: Create a new user
       parameters:
         - in: body
           name: body
-          description: Signup Payload
+          description: Signup payload
           required: true
           schema:
             $ref: '#/definitions/User'
-      produces:
-        - application/json
       responses:
         '200':
-          description: Signup Successfully
+          description: User successfully created
           schema:
-            $ref: '#/definitions/ApiResponse'
+            $ref: '#/definitions/UserResponse'
         '400':
-          description: Invalid Fields
+          description: Invalid fields
         '500':
           description: Internal Server Error
+
   /user/profile:
     get:
       security:
         - Bearer: []
       tags:
         - User Module
-      summary: User Profile API
-      description: API for fetching a user profile
-      #produces:
-       # - application/json
+      summary: Get user profile
+      description: Retrieve the authenticated user's profile
       responses:
         '200':
-          description: User profile retrieved successully
+          description: User profile successfully retrieved
           schema:
-            $ref: '#/definitions/ApiResponse'
-        '400':
-          description: Invalid Fields
+            $ref: '#/definitions/ProfileResponse'
+        '401':
+          description: Unauthorized - token missing or invalid
         '500':
           description: Internal Server Error
+
     put:
       security:
         - Bearer: []
       tags:
         - User Module
-      summary: User Profile API
-      description: API for updating a user profile
+      summary: Update user profile
+      description: Update the authenticated user's username
       parameters:
         - in: body
           name: body
-          description: Update user profile attributes
+          description: Username to update
           required: true
           schema:
             $ref: '#/definitions/UserProfile'
-      produces:
-        - application/json
       responses:
         '200':
-          description: User profile retrieved successully
+          description: User profile successfully updated
           schema:
-            $ref: '#/definitions/ApiResponse'
+            $ref: '#/definitions/ProfileResponse'
         '400':
-          description: Invalid Fields
+          description: Invalid fields
+        '401':
+          description: Unauthorized - token missing or invalid
         '500':
           description: Internal Server Error
+
+
+  # =========================
+  # TRANSACTIONS
+  # =========================
+
+  /accounts/{accountId}/transactions:
+    get:
+      security:
+        - Bearer: []
+      tags:
+        - Transaction Module
+      summary: Get account transactions
+      description: Retrieve transactions for a specific bank account
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          type: string
+          description: ID of the bank account
+
+        - name: month
+          in: query
+          required: false
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Month used to filter transactions
+
+        - name: year
+          in: query
+          required: false
+          type: integer
+          description: Year used to filter transactions
+
+      responses:
+        '200':
+          description: Transactions successfully retrieved
+          schema:
+            $ref: '#/definitions/TransactionsResponse'
+        '400':
+          description: Invalid account ID or query parameters
+        '401':
+          description: Unauthorized - token missing or invalid
+        '404':
+          description: Account not found
+        '500':
+          description: Internal Server Error
+
+
+  /transactions/{transactionId}:
+    get:
+      security:
+        - Bearer: []
+      tags:
+        - Transaction Module
+      summary: Get transaction details
+      description: Retrieve the details of a specific transaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          type: string
+          description: ID of the transaction
+
+      responses:
+        '200':
+          description: Transaction successfully retrieved
+          schema:
+            $ref: '#/definitions/TransactionResponse'
+        '401':
+          description: Unauthorized - token missing or invalid
+        '404':
+          description: Transaction not found
+        '500':
+          description: Internal Server Error
+
+    patch:
+      security:
+        - Bearer: []
+      tags:
+        - Transaction Module
+      summary: Update transaction information
+      description: Update editable information such as the category or note of a transaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          type: string
+          description: ID of the transaction
+
+        - in: body
+          name: body
+          required: true
+          description: Transaction fields to update
+          schema:
+            $ref: '#/definitions/TransactionUpdate'
+
+      responses:
+        '200':
+          description: Transaction successfully updated
+          schema:
+            $ref: '#/definitions/TransactionResponse'
+        '400':
+          description: Invalid fields
+        '401':
+          description: Unauthorized - token missing or invalid
+        '404':
+          description: Transaction not found
+        '500':
+          description: Internal Server Error
+
+
+# =========================
+# SECURITY
+# =========================
+
 securityDefinitions:
+
   Bearer:
     type: apiKey
     name: Authorization
     in: header
+
+
+# =========================
+# DEFINITIONS
+# =========================
+
 definitions:
+
   User:
+    type: object
+    required:
+      - email
+      - password
+      - firstName
+      - lastName
+      - userName
     properties:
       email:
         type: string
-        description: user email
+        description: User email
+        example: tony@stark.com
+
       password:
         type: string
-        description: user password
+        description: User password
+        example: password123
+
       firstName:
         type: string
-        description: user first name
+        description: User first name
+        example: Tony
+
       lastName:
         type: string
-        description: user last name
+        description: User last name
+        example: Stark
+
       userName:
         type: string
-        description: user public name
+        description: User public username
+        example: Iron
+
+
   Login:
+    type: object
+    required:
+      - email
+      - password
     properties:
       email:
         type: string
-        description: user email
+        description: User email
+        example: tony@stark.com
+
       password:
         type: string
-        description: user password
-  ApiResponse:
+        description: User password
+        example: password123
+
+
+  LoginResponse:
     type: object
     properties:
       status:
         type: integer
+        example: 200
+
       message:
         type: string
+        example: User successfully logged in
+
+      body:
+        type: object
+        properties:
+          token:
+            type: string
+            description: JWT authentication token
+
+
+  UserResponse:
+    type: object
+    properties:
+      status:
+        type: integer
+        example: 200
+
+      message:
+        type: string
+        example: User successfully created
+
       body:
         type: object
         properties:
           id:
             type: string
+
           email:
             type: string
-  LoginResponse:
+
+          firstName:
+            type: string
+
+          lastName:
+            type: string
+
+          userName:
+            type: string
+
+
+  ProfileResponse:
     type: object
     properties:
-      token:
+      status:
+        type: integer
+        example: 200
+
+      message:
         type: string
+        example: Successfully got user profile data
+
+      body:
+        type: object
+        properties:
+          id:
+            type: string
+
+          email:
+            type: string
+            example: tony@stark.com
+
+          firstName:
+            type: string
+            example: Tony
+
+          lastName:
+            type: string
+            example: Stark
+
+          userName:
+            type: string
+            example: Iron
+
+
   UserProfile:
     type: object
+    required:
+      - userName
     properties:
       userName:
         type: string
+        description: User public username
+        example: IronMan
+
+
+  Transaction:
+    type: object
+    properties:
+
+      id:
+        type: string
+        description: Unique transaction ID
+        example: 64f123456789
+
+      accountId:
+        type: string
+        description: Bank account associated with the transaction
+        example: account-8349
+
+      date:
+        type: string
+        format: date
+        description: Transaction date
+        example: '2026-08-13'
+
+      description:
+        type: string
+        description: Transaction description
+        example: Golden Sun Bakery
+
+      amount:
+        type: number
+        format: double
+        description: Transaction amount
+        example: 8.00
+
+      balance:
+        type: number
+        format: double
+        description: Account balance after the transaction
+        example: 298.00
+
+      transactionType:
+        type: string
+        description: Transaction type
+        example: Electronic
+
+      category:
+        type: string
+        description: User-defined transaction category
+        example: Food
+
+      note:
+        type: string
+        description: User-defined note attached to the transaction
+        example: Breakfast
+
+
+  TransactionUpdate:
+    type: object
+    properties:
+
+      category:
+        type: string
+        description: New category for the transaction
+        example: Food
+
+      note:
+        type: string
+        description: New note for the transaction
+        example: Restaurant with client
+
+
+  TransactionsResponse:
+    type: object
+    properties:
+
+      status:
+        type: integer
+        example: 200
+
+      message:
+        type: string
+        example: Transactions successfully retrieved
+
+      body:
+        type: array
+        items:
+          $ref: '#/definitions/Transaction'
+
+
+  TransactionResponse:
+    type: object
+    properties:
+
+      status:
+        type: integer
+        example: 200
+
+      message:
+        type: string
+        example: Transaction successfully retrieved
+
+      body:
+        $ref: '#/definitions/Transaction'
